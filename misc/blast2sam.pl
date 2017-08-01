@@ -51,12 +51,15 @@ sub blast2sam {
       if ($next_line=~/^(\S+)$/) {
         $sam[0] .= $1;
       }
-    } elsif (/(\S+)\s+total letters/) {
-      $qlen = $1; $qlen =~ s/,//g;
-    } elsif (/^>(\S+)/) {
+      $qlen = undef;
+    } elsif (/^> (\S+)/) {
       $sam[2] = $1;
     } elsif (/Length\s*=\s*(\d+)/) {
-      $slen = $1;
+      if ($qlen) {
+        $slen = $1;
+      } else {
+	$qlen = $1;
+      }
     } elsif (/Score\s+=\s+(\S+) bits.+Expect(\(\d+\))?\s+=\s+(\S+)/) { # the start of an alignment block
       my ($as, $ev) = (int($1 + .499), $3);
       $ev = "1$ev" if ($ev =~ /^e/);
@@ -87,14 +90,14 @@ sub blast2sam {
     }
   }
   if ($sam[2]) {
-   &blast_print_sam(\@sam, \@cigar, \@cmaux, $qlen - $qend); # the last argument may be a problem
+   &blast_print_sam(\@sam, \@cigar, \@cmaux, $qlen - $qend); 
   }
 }
 
 sub blast_print_sam {
   my ($sam, $cigar, $cmaux, $qrest) = @_;
   push(@$cigar, $cmaux->[1] . substr("MDI", $cmaux->[0], 1));
-  #push(@$cigar, $qrest . 'H') if ($qrest);
+  push(@$cigar, $qrest . 'H') if ($qrest > 0);
   if ($sam->[1] & 0x10) {
     @$cigar = reverse(@$cigar);
     $sam->[9] = reverse($sam->[9]);
